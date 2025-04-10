@@ -87,7 +87,7 @@ upload_error = None
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
     global input_df, upload_error
     input_records = input_df.to_dict(orient='records') if input_df is not None else None
