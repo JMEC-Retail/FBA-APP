@@ -71,11 +71,11 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for row in input_df.itertuples(index=False) %}
+                                {% for r in input_records %}
                                 <tr>
-                                    <td>{{ row._asdict().get('Sticker SKU') }}</td>
-                                    <td>{{ row._asdict().get('Product Barcode') }}</td>
-                                    <td>{{ row._asdict().get('Quantity') }}</td>
+                                    <td>{{ r['Sticker SKU'] }}</td>
+                                    <td>{{ r['Product Barcode'] }}</td>
+                                    <td>{{ r['Quantity'] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

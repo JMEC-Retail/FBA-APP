@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import pandas as pd
 import os
+import re
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -8,43 +9,103 @@ UPLOAD_FOLDER = 'sources/uploads'
 SOURCE_FOLDER = 'sources'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load and sanitize inventory data
-inventory_path = os.path.join(SOURCE_FOLDER, 'Enterprise_Inventory.csv')
-images_path = os.path.join(SOURCE_FOLDER, 'IMAGES.csv')
-
-# Set display option to show full column width
+# ── Pandas display option ─────────────────────────────────────────────────────
 pd.set_option('display.max_colwidth', None)
 
-inventory_df_raw = pd.read_csv(inventory_path)
-inventory_df_raw.columns = [col.strip() for col in inventory_df_raw.columns]
-inventory_df = inventory_df_raw[['INV No.','UPC', 'ASIN', 'LPN', 'Title', 'Image Link']]
+# ── Load reference data once ─────────────────────────────────────────────────
 
-images_df = pd.read_csv(images_path)[['SKU', 'ASIN']]
+def _load_inventory():
+    path = os.path.join(SOURCE_FOLDER, 'Enterprise_Inventory.csv')
+    df = pd.read_csv(path, dtype=str).fillna('')
+    df.columns = [c.strip() for c in df.columns]
+    return df[['INV No.', 'UPC', 'ASIN', 'LPN', 'Title', 'Image Link']]
 
-# Global storage for boxes and scanned items
+def _load_images():
+    path = os.path.join(SOURCE_FOLDER, 'IMAGES.csv')
+    df = pd.read_csv(path, dtype=str)[['SKU', 'ASIN']].fillna('')
+    df['SKU'] = df['SKU'].str.upper().str.strip()
+    return df
+
+inventory_df = _load_inventory()
+images_df    = _load_images()
+
+# ── Helper functions ─────────────────────────────────────────────────────────-
+
+def _clean_sku(raw: str) -> str:
+    if pd.isna(raw):
+        return ''
+    value = str(raw).strip()
+    parts = value.split('-')
+    if len(parts) >= 3:
+        key = '-'.join(parts[2:])
+    elif len(parts) == 2:
+        key = parts[1]
+    else:
+        key = value.replace('-', '')
+    return key.upper().strip()
+
+
+def _match_exact(cleaned_no_dash: str):
+    return inventory_df[
+        (inventory_df['UPC'].str.replace('-', '', regex=False).str.upper() == cleaned_no_dash) |
+        (inventory_df['ASIN'].str.replace('-', '', regex=False).str.upper() == cleaned_no_dash) |
+        (inventory_df['LPN'].str.replace('-', '', regex=False).str.upper() == cleaned_no_dash)
+    ]
+
+
+def _match_partial(cleaned_no_dash: str):
+    return inventory_df[
+        inventory_df['UPC'].str.replace('-', '', regex=False).str.upper().str.contains(cleaned_no_dash, na=False) |
+        inventory_df['LPN'].str.replace('-', '', regex=False).str.upper().str.contains(cleaned_no_dash, na=False)
+    ]
+
+
+def find_asin(cleaned: str, original: str) -> str:
+    cleaned_no_dash = cleaned.replace('-', '')
+    exact = _match_exact(cleaned_no_dash)
+    if not exact.empty:
+        asin = exact.iloc[0]['ASIN']
+        print(f"[Inventory‑Exact] Original: {original} → Cleaned: {cleaned} → ASIN: {asin}")
+        return asin if asin else 'N/A'
+    partial = _match_partial(cleaned_no_dash)
+    if not partial.empty:
+        asin = partial.iloc[0]['ASIN']
+        print(f"[Inventory‑Partial] Original: {original} → Cleaned: {cleaned} → ASIN: {asin}")
+        return asin if asin else 'N/A'
+    img = images_df[images_df['SKU'] == cleaned.upper()]
+    if not img.empty:
+        asin = img.iloc[0]['ASIN']
+        print(f"[Images] Original: {original} → Cleaned: {cleaned} → ASIN: {asin}")
+        return asin if asin else 'N/A'
+    print(f"[No Match] Original: {original} → Cleaned: {cleaned}")
+    return 'N/A'
+
+# ── Global state ─────────────────────────────────────────────────────────────
 boxes = {}
-input_df = None
+input_df = None            # DataFrame of uploaded CSV
 upload_error = None
 
-@app.route('/', methods=['GET', 'POST'])
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.route('/')
 def index():
     global input_df, upload_error
-    return render_template('index.html', 
-                           input_df=input_df, 
-                           boxes=boxes,
-                           inventory_df=inventory_df,
-                           upload_error=upload_error)
+    input_records = input_df.to_dict(orient='records') if input_df is not None else None
+    return render_template(
+        'index.html',
+        input_df=input_df,            # still available if template needs it
+        input_records=input_records,  # preferred for iteration in Jinja
+        boxes=boxes,
+        inventory_df=inventory_df,
+        upload_error=upload_error
+    )
+
 
 @app.route('/inventory')
 def inventory():
-    inventory_path = os.path.join(SOURCE_FOLDER, 'Enterprise_Inventory.csv')
-    df = pd.read_csv(inventory_path)
-    df.columns = [col.strip() for col in df.columns]
-    df['Image Link'] = df['Image Link'].fillna('').astype(str).str.strip()
-    
-    # Convert DataFrame to a list of dictionaries
+    # fresh copy for UI display only
+    df = _load_inventory()
     inventory_records = df.to_dict(orient='records')
-    print(inventory_records[:3])  # Debugging output
     return render_template('inventory.html', inventory_records=inventory_records)
 
 
@@ -63,81 +124,45 @@ def upload():
     file.save(filepath)
 
     try:
-        df = pd.read_csv(filepath)
-        df.columns = [col.strip() for col in df.columns]  # Normalize column headers
-
-        if 'Merchant SKU' not in df.columns or 'Quantity' not in df.columns:
-            upload_error = "CSV must contain 'Merchant SKU' and 'Quantity' columns."
+        df = pd.read_csv(filepath, dtype=str).fillna('')
+        col_map = {c.lower().strip().replace('\u00a0', ' '): c for c in df.columns}
+        if 'merchant sku' not in col_map or 'quantity' not in col_map:
+            upload_error = "CSV must contain 'Merchant SKU' and 'Quantity' columns (case‑insensitive)."
             input_df = None
         else:
-            # Rename Merchant SKU to Product Barcode
-            df.rename(columns={'Merchant SKU': 'Product Barcode'}, inplace=True)
-
-            # Clean and match to inventory or images
-            def extract_key(value):
-                if pd.isna(value):
-                    return ''
-                parts = str(value).split('-')
-                if len(parts) >= 3:
-                    return '-'.join(parts[2:])
-                elif len(parts) == 2:
-                    return parts[1]
-                else:
-                    return value.replace('-', '')
-
-            def find_asin(cleaned, original):
-                match_inventory = inventory_df[(inventory_df['UPC'] == cleaned) |
-                                               (inventory_df['ASIN'] == cleaned) |
-                                               (inventory_df['LPN'] == cleaned)]
-                if not match_inventory.empty:
-                    asin = match_inventory.iloc[0]['ASIN']
-                    print(f"[Inventory] Original: {original} → Cleaned: {cleaned} → Matched ASIN: {asin}")
-                    return asin
-
-                match_images = images_df[images_df['SKU'] == cleaned]
-                if not match_images.empty:
-                    asin = match_images.iloc[0]['ASIN']
-                    print(f"[Images] Original: {original} → Cleaned: {cleaned} → Matched ASIN: {asin}")
-                    return asin
-
-                print(f"[No Match] Original: {original} → Cleaned: {cleaned}")
-                return 'N/A'
-
+            df.rename(columns={
+                col_map['merchant sku']: 'Product Barcode',
+                col_map['quantity']: 'Quantity'
+            }, inplace=True)
             sticker_skus = []
             for value in df['Product Barcode']:
-                cleaned = extract_key(value)
+                cleaned = _clean_sku(value)
                 asin = find_asin(cleaned, value)
-                sticker_skus.append(asin)
-
+                sticker_skus.append(str(asin) if asin else 'N/A')
             df['Sticker SKU'] = sticker_skus
-            df = df[['Sticker SKU', 'Product Barcode', 'Quantity']]
-            input_df = df
-
+            input_df = df[['Sticker SKU', 'Product Barcode', 'Quantity']]
+            print("[DEBUG] Uploaded CSV after ASIN match:\n", input_df.head())
     except Exception as e:
         upload_error = f"File upload failed: {str(e)}"
         input_df = None
-
     return redirect(url_for('index'))
+
 
 @app.route('/add_box', methods=['POST'])
 def add_box():
     box_number = len(boxes) + 1
-    box_key = f"Box No. {box_number}"
-    boxes[box_key] = {}
+    boxes[f"Box No. {box_number}"] = {}
     return redirect(url_for('index'))
+
 
 @app.route('/scan', methods=['POST'])
 def scan():
     box = request.form['box']
     sku = request.form['sku'].strip()
-
     if box in boxes:
-        box_items = boxes[box]
-        if sku in box_items:
-            box_items[sku] += 1
-        else:
-            box_items[sku] = 1
+        boxes[box][sku] = boxes[box].get(sku, 0) + 1
     return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
