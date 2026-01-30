@@ -1,0 +1,195 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  ADMIN
+  SHIPPER
+  PACKER
+}
+
+enum NotificationType {
+  BOX_CONCLUDED
+  SHIPMENT_COMPLETED
+  SHIPMENT_CANCELLED
+  PICKER_ASSIGNED
+  SYSTEM_ANNOUNCEMENT
+}
+
+enum NotificationMethod {
+  IN_APP
+  EMAIL
+  BOTH
+}
+
+enum ShipmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BoxStatus {
+  OPEN
+  CONCLUDED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  shipments     Shipment[]
+  pickerLinks   PickerLink[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  notificationSettings NotificationSetting[]
+}
+
+model Shipment {
+  id        String         @id @default(cuid())
+  name      String
+  status    ShipmentStatus @default(ACTIVE)
+  shipperId String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  // Relationships
+  shipper     User         @relation(fields: [shipperId], references: [id])
+  items       Item[]
+  boxes       Box[]
+  pickerLinks PickerLink[]
+  auditLogs   AuditLog[]
+}
+
+model Item {
+  id         String @id @default(cuid())
+  shipmentId String
+  sku        String
+  fnSku      String
+  quantity   Int
+  pickedQty  Int    @default(0)
+  identifier String
+
+  // Relationships
+  shipment Shipment  @relation(fields: [shipmentId], references: [id])
+  boxItems BoxItem[]
+
+  @@index([shipmentId])
+  @@index([sku])
+}
+
+model Box {
+  id          String     @id @default(cuid())
+  shipmentId  String
+  name        String
+  status      BoxStatus  @default(OPEN)
+  concludedAt DateTime?
+  createdAt   DateTime   @default(now())
+
+  // Relationships
+  shipment Shipment  @relation(fields: [shipmentId], references: [id])
+  boxItems BoxItem[]
+
+  @@index([shipmentId])
+}
+
+model BoxItem {
+  id       String @id @default(cuid())
+  boxId    String
+  itemId   String
+  quantity Int
+
+  // Relationships
+  box  Box  @relation(fields: [boxId], references: [id])
+  item Item @relation(fields: [itemId], references: [id])
+
+  @@unique([boxId, itemId])
+  @@index([boxId])
+  @@index([itemId])
+}
+
+model PickerLink {
+  id        String    @id @default(cuid())
+  uuid      String    @unique
+  shipmentId String
+  packerId  String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  // Relationships
+  shipment Shipment @relation(fields: [shipmentId], references: [id])
+  packer   User?    @relation(fields: [packerId], references: [id])
+
+  @@index([uuid])
+  @@index([shipmentId])
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  userId     String
+  shipmentId String?
+  action     String
+  details    String?
+  timestamp  DateTime  @default(now())
+
+  // Relationships
+  user     User      @relation(fields: [userId], references: [id])
+  shipment Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([shipmentId])
+  @@index([timestamp])
+}
+
+model Notification {
+  id               String             @id @default(cuid())
+  userId           String
+  type             NotificationType
+  title            String
+  message          String
+  method           NotificationMethod  @default(IN_APP)
+  isRead           Boolean             @default(false)
+  metadata         Json?
+  batchId          String?
+  expiresAt        DateTime?
+  createdAt        DateTime            @default(now())
+  readAt           DateTime?
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([batchId])
+}
+
+model NotificationSetting {
+  id                   String             @id @default(cuid())
+  userId               String
+  type                 NotificationType
+  enabled              Boolean            @default(true)
+  method               NotificationMethod @default(IN_APP)
+  emailEnabled         Boolean            @default(false)
+  realTimeEnabled      Boolean            @default(true)
+  batchEnabled         Boolean            @default(false)
+  batchWindowMinutes   Int                @default(15)
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type])
+}
