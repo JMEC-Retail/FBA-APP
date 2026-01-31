@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 
 interface SystemSettings {
   siteName: string
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Access denied. Admin privileges required.' },
         { status: 403 }
@@ -228,7 +228,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Access denied. Admin privileges required.' },
         { status: 403 }
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Access denied. Admin privileges required.' },
         { status: 403 }

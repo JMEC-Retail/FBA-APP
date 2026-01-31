@@ -5,7 +5,7 @@ import { useSession } from '@/lib/mock-nextauth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { UserRole, AuthUser } from '@/lib/auth'
+import { UserRole, AuthUser } from '@/auth'
 import SystemHealthCard from '@/components/system-health-card'
 
 interface SystemSettings {

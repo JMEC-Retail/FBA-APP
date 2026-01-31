@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -104,21 +104,21 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-lg border border-gray-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900">FBA Shipment Manager</h1>
+                <h1 className="text-2xl font-bold text-black">FBA Shipment Manager</h1>
               </div>
             </div>
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
-                <a href="#features" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Features</a>
-                <a href="#roles" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">User Roles</a>
-                <a href="#benefits" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Benefits</a>
+                <a href="#features" className="text-black hover:bg-gray-100 px-3 py-2 rounded-md text-sm font-medium">Features</a>
+                <a href="#roles" className="text-black hover:bg-gray-100 px-3 py-2 rounded-md text-sm font-medium">User Roles</a>
+                <a href="#benefits" className="text-black hover:bg-gray-100 px-3 py-2 rounded-md text-sm font-medium">Benefits</a>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -137,12 +137,12 @@ export default async function Home() {
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold text-black mb-6">
               Streamline Your
-              <span className="text-blue-600"> Amazon FBA </span>
+              <span className="text-black underline"> Amazon FBA </span>
               Operations
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl text-black mb-8 max-w-3xl mx-auto">
               Professional shipment management platform designed for Admins, Shippers, and Packers. 
               Manage inventory, track shipments, and optimize your FBA workflow.
             </p>
@@ -164,31 +164,31 @@ export default async function Home() {
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="text-4xl mb-4">📦</div>
-              <h3 className="text-lg font-semibold">Smart Shipment Tracking</h3>
-              <p className="text-gray-600">Real-time visibility into your FBA shipments</p>
+              <h3 className="text-lg font-semibold text-black">Smart Shipment Tracking</h3>
+              <p className="text-black">Real-time visibility into your FBA shipments</p>
             </div>
             <div className="text-center">
               <div className="text-4xl mb-4">👥</div>
-              <h3 className="text-lg font-semibold">Role-Based Access</h3>
-              <p className="text-gray-600">Tailored experiences for every team member</p>
+              <h3 className="text-lg font-semibold text-black">Role-Based Access</h3>
+              <p className="text-black">Tailored experiences for every team member</p>
             </div>
             <div className="text-center">
               <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-lg font-semibold">Data-Driven Insights</h3>
-              <p className="text-gray-600">Make informed decisions with analytics</p>
+              <h3 className="text-lg font-semibold text-black">Data-Driven Insights</h3>
+              <p className="text-black">Make informed decisions with analytics</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className="py-20 bg-white border-t border-gray-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
               Powerful Features for Every Team
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-black max-w-3xl mx-auto">
               Everything you need to manage your FBA shipments efficiently in one platform
             </p>
           </div>
@@ -203,7 +203,7 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-black space-y-2">
                   <li>• Drag-and-drop interface</li>
                   <li>• Error validation and reporting</li>
                   <li>• Template downloads</li>
@@ -220,7 +220,7 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-black space-y-2">
                   <li>• Access control</li>
                   <li>• Expiration management</li>
                   <li>• Activity tracking</li>
@@ -237,7 +237,7 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-black space-y-2">
                   <li>• Touch-optimized</li>
                   <li>• Offline capabilities</li>
                   <li>• Progressive Web App</li>
@@ -254,7 +254,7 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-black space-y-2">
                   <li>• Custom report builder</li>
                   <li>• Export to PDF/Excel</li>
                   <li>• Scheduled reports</li>
@@ -271,7 +271,7 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-black space-y-2">
                   <li>• Email notifications</li>
                   <li>• In-app alerts</li>
                   <li>• SMS integration</li>
@@ -288,7 +288,7 @@ export default async function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-black space-y-2">
                   <li>• SOC 2 compliant</li>
                   <li>• End-to-end encryption</li>
                   <li>• Audit logging</li>
@@ -300,13 +300,13 @@ export default async function Home() {
       </section>
 
       {/* User Roles Section */}
-      <section id="roles" className="py-20 bg-gray-50">
+      <section id="roles" className="py-20 bg-white border-t border-gray-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
               Built for Every Role
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-black max-w-3xl mx-auto">
               Tailored experiences designed to meet the specific needs of each team member
             </p>
           </div>
@@ -328,8 +328,8 @@ export default async function Home() {
                       <span className="text-xl mr-2">{feature.icon}</span>
                       <h4 className="font-semibold">{feature.title}</h4>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{feature.description}</p>
-                    <ul className="text-xs text-gray-500 space-y-1">
+                    <p className="text-sm text-black mb-2">{feature.description}</p>
+                    <ul className="text-xs text-black space-y-1">
                       {feature.benefits.map((benefit, idx) => (
                         <li key={idx}>• {benefit}</li>
                       ))}
@@ -355,8 +355,8 @@ export default async function Home() {
                       <span className="text-xl mr-2">{feature.icon}</span>
                       <h4 className="font-semibold">{feature.title}</h4>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{feature.description}</p>
-                    <ul className="text-xs text-gray-500 space-y-1">
+                    <p className="text-sm text-black mb-2">{feature.description}</p>
+                    <ul className="text-xs text-black space-y-1">
                       {feature.benefits.map((benefit, idx) => (
                         <li key={idx}>• {benefit}</li>
                       ))}
@@ -382,8 +382,8 @@ export default async function Home() {
                       <span className="text-xl mr-2">{feature.icon}</span>
                       <h4 className="font-semibold">{feature.title}</h4>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{feature.description}</p>
-                    <ul className="text-xs text-gray-500 space-y-1">
+                    <p className="text-sm text-black mb-2">{feature.description}</p>
+                    <ul className="text-xs text-black space-y-1">
                       {feature.benefits.map((benefit, idx) => (
                         <li key={idx}>• {benefit}</li>
                       ))}
@@ -397,13 +397,13 @@ export default async function Home() {
       </section>
 
       {/* Benefits Section */}
-      <section id="benefits" className="py-20 bg-blue-600 text-white">
+      <section id="benefits" className="py-20 bg-white border-t border-gray-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Why Choose FBA Shipment Manager?
             </h2>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+            <p className="text-xl text-black max-w-3xl mx-auto">
               Join hundreds of businesses that have transformed their FBA operations
             </p>
           </div>
@@ -411,37 +411,37 @@ export default async function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="text-4xl font-bold mb-2">50%</div>
-              <div className="text-blue-100 mb-2">Time Savings</div>
+              <div className="text-black mb-2">Time Savings</div>
               <p className="text-sm">Reduce shipment processing time with automated workflows</p>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold mb-2">99.9%</div>
-              <div className="text-blue-100 mb-2">Uptime</div>
+              <div className="text-black mb-2">Uptime</div>
               <p className="text-sm">Reliable service you can count on for your business</p>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold mb-2">24/7</div>
-              <div className="text-blue-100 mb-2">Support</div>
+              <div className="text-black mb-2">Support</div>
               <p className="text-sm">Expert help whenever you need it</p>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold mb-2">∞</div>
-              <div className="text-blue-100 mb-2">Scalability</div>
+              <div className="text-black mb-2">Scalability</div>
               <p className="text-sm">Grow your business without limits</p>
             </div>
           </div>
 
           <div className="text-center mt-16">
-            <h3 className="text-2xl font-bold mb-4">Ready to Transform Your FBA Operations?</h3>
-            <p className="text-blue-100 mb-8">Join thousands of satisfied customers who streamlined their workflow</p>
+            <h3 className="text-2xl font-bold mb-4 text-black">Ready to Transform Your FBA Operations?</h3>
+            <p className="text-black mb-8">Join thousands of satisfied customers who streamlined their workflow</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/auth/signup">
-                <Button variant="secondary" size="lg" className="text-lg px-8 py-3 bg-white text-blue-600 hover:bg-gray-100">
+                <Button variant="secondary" size="lg" className="text-lg px-8 py-3 bg-white text-black hover:bg-gray-100">
                   Start Your Free Trial
                 </Button>
               </Link>
               <Link href="/auth/signin">
-                <Button variant="outline" size="lg" className="text-lg px-8 py-3 border-white text-white hover:bg-white hover:text-blue-600">
+                <Button variant="outline" size="lg" className="text-lg px-8 py-3 border-black text-black hover:bg-black hover:text-white">
                   Sign In to Your Account
                 </Button>
               </Link>
@@ -451,41 +451,41 @@ export default async function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-white border-t border-gray-300 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-lg font-semibold mb-4">FBA Shipment Manager</h3>
-              <p className="text-gray-400 text-sm">
+              <h3 className="text-lg font-semibold mb-4 text-black">FBA Shipment Manager</h3>
+              <p className="text-black text-sm">
                 Professional FBA shipment management platform for Amazon sellers.
               </p>
             </div>
             <div>
-              <h4 className="text-lg font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#features" className="hover:text-white">Features</a></li>
-                <li><a href="#roles" className="hover:text-white">User Roles</a></li>
-                <li><a href="#benefits" className="hover:text-white">Benefits</a></li>
+              <h4 className="text-lg font-semibold mb-4 text-black">Product</h4>
+              <ul className="space-y-2 text-black text-sm">
+                <li><a href="#features" className="hover:bg-gray-100">Features</a></li>
+                <li><a href="#roles" className="hover:bg-gray-100">User Roles</a></li>
+                <li><a href="#benefits" className="hover:bg-gray-100">Benefits</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-lg font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link href="/auth/signin" className="hover:text-white">Sign In</Link></li>
-                <li><Link href="/auth/signup" className="hover:text-white">Sign Up</Link></li>
-                <li><a href="#" className="hover:text-white">Documentation</a></li>
+              <h4 className="text-lg font-semibold mb-4 text-black">Support</h4>
+              <ul className="space-y-2 text-black text-sm">
+                <li><Link href="/auth/signin" className="hover:bg-gray-100">Sign In</Link></li>
+                <li><Link href="/auth/signup" className="hover:bg-gray-100">Sign Up</Link></li>
+                <li><a href="#" className="hover:bg-gray-100">Documentation</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-lg font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white">Security</a></li>
+              <h4 className="text-lg font-semibold mb-4 text-black">Legal</h4>
+              <ul className="space-y-2 text-black text-sm">
+                <li><a href="#" className="hover:bg-gray-100">Privacy Policy</a></li>
+                <li><a href="#" className="hover:bg-gray-100">Terms of Service</a></li>
+                <li><a href="#" className="hover:bg-gray-100">Security</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
+          <div className="border-t border-gray-300 mt-8 pt-8 text-center text-black text-sm">
             <p>&copy; 2024 FBA Shipment Manager. All rights reserved.</p>
           </div>
         </div>

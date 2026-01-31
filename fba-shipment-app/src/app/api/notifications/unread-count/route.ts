@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { notificationSystem } from '@/lib/notifications'
 
 // GET /api/notifications/unread-count - Get unread notification count

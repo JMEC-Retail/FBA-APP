@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { auth } from '@/lib/auth'
+import { getClientSession } from '@/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -140,8 +140,8 @@ export default function ShipmentsPage() {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const sessionData = await auth() as AuthSession
-        setSession(sessionData)
+        const sessionData = await getClientSession()
+        setSession(sessionData as AuthSession)
       } catch (err) {
         setError('Failed to load user session')
       }

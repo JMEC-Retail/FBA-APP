@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { logAuditInfo } from './audit'
+// import { logAuditInfo } from './audit'
 import { promises as fs } from 'fs'
 import path from 'path'
 
@@ -239,28 +239,28 @@ class CSVReportGenerator {
       }
 
       // Log to audit system
-      await logAuditInfo(
-        'CSV report generated for box',
-        {
-          userId: context?.userId,
-          userEmail: context?.userEmail,
-          shipmentId: box.shipmentId
-        },
-        `Box: ${box.name}, Format: ${format}, Records: ${recordCount}, File: ${fileName}`
-      )
+      // await logAuditInfo(
+      //   'CSV report generated for box',
+      //   {
+      //     userId: context?.userId,
+      //     userEmail: context?.userEmail,
+      //     shipmentId: box.shipmentId
+      //   },
+      //   `Box: ${box.name}, Format: ${format}, Records: ${recordCount}, File: ${fileName}`
+      // )
 
       return result
 
     } catch (error) {
-      await logAuditInfo(
-        'CSV report generation failed for box',
-        {
-          userId: context?.userId,
-          userEmail: context?.userEmail,
-          shipmentId: undefined
-        },
-        `Box ID: ${boxId}, Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      // await logAuditInfo(
+      //   'CSV report generation failed for box',
+      //   {
+      //     userId: context?.userId,
+      //     userEmail: context?.userEmail,
+      //     shipmentId: undefined
+      //   },
+      //   `Box ID: ${boxId}, Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      // )
       throw error
     }
   }
@@ -338,28 +338,28 @@ class CSVReportGenerator {
       }
 
       // Log to audit system
-      await logAuditInfo(
-        'CSV summary report generated for shipment',
-        {
-          userId: context?.userId,
-          userEmail: context?.userEmail,
-          shipmentId
-        },
-        `Shipment: ${shipment.name}, Boxes: ${shipment.boxes.length}, Records: ${recordCount}, File: ${fileName}`
-      )
+      // await logAuditInfo(
+      //   'CSV summary report generated for shipment',
+      //   {
+      //     userId: context?.userId,
+      //     userEmail: context?.userEmail,
+      //     shipmentId
+      //   },
+      //   `Shipment: ${shipment.name}, Boxes: ${shipment.boxes.length}, Records: ${recordCount}, File: ${fileName}`
+      // )
 
       return result
 
     } catch (error) {
-      await logAuditInfo(
-        'CSV summary report generation failed for shipment',
-        {
-          userId: context?.userId,
-          userEmail: context?.userEmail,
-          shipmentId
-        },
-        `Shipment ID: ${shipmentId}, Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      // await logAuditInfo(
+      //   'CSV summary report generation failed for shipment',
+      //   {
+      //     userId: context?.userId,
+      //     userEmail: context?.userEmail,
+      //     shipmentId
+      //   },
+      //   `Shipment ID: ${shipmentId}, Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      // )
       throw error
     }
   }
@@ -440,23 +440,23 @@ class CSVReportGenerator {
       const filePath = path.join(this.reportsDir, fileName)
       await fs.unlink(filePath)
       
-      await logAuditInfo(
-        'CSV report deleted',
-        {
-          userId: context?.userId,
-          userEmail: context?.userEmail
-        },
-        `Deleted file: ${fileName}`
-      )
+      // await logAuditInfo(
+      //   'CSV report deleted',
+      //   {
+      //     userId: context?.userId,
+      //     userEmail: context?.userEmail
+      //   },
+      //   `Deleted file: ${fileName}`
+      // )
     } catch (error) {
-      await logAuditInfo(
-        'CSV report deletion failed',
-        {
-          userId: context?.userId,
-          userEmail: context?.userEmail
-        },
-        `File: ${fileName}, Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+      // await logAuditInfo(
+      //   'CSV report deletion failed',
+      //   {
+      //     userId: context?.userId,
+      //     userEmail: context?.userEmail
+      //   },
+      //   `File: ${fileName}, Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      // )
       throw error
     }
   }

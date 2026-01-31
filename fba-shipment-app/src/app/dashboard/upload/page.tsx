@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,9 @@ import {
   AlertCircle,
   Eye,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  User,
+  Package
 } from 'lucide-react'
 
 interface CsvRow {
@@ -35,6 +37,18 @@ interface UploadResponse {
   details?: string[]
 }
 
+interface PackerSession {
+  user: {
+    id: string
+    email: string
+    name: string
+    role: string
+    stationId: string
+    stationName: string
+    loginTime: string
+  }
+}
+
 export default function UploadPage() {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
@@ -43,12 +57,54 @@ export default function UploadPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [userType, setUserType] = useState<'ADMIN' | 'SHIPPER' | 'PACKER' | null>(null)
+  const [packerSession, setPackerSession] = useState<PackerSession | null>(null)
 
   const sampleData: CsvRow[] = [
     { QTY: "10", SKU: "ABC-001", FNSKU: "FN001", ID: "ITEM001" },
     { QTY: "25", SKU: "XYZ-002", FNSKU: "FN002", ID: "ITEM002" },
     { QTY: "5", SKU: "DEF-003", FNSKU: "FN003", ID: "ITEM003" }
   ]
+
+  // Check user type on mount
+  useEffect(() => {
+    const checkUserType = () => {
+      // Check for PACKER session first
+      if (typeof window !== "undefined") {
+        const packerSessionData = sessionStorage.getItem("packer-session")
+        if (packerSessionData) {
+          const parsedSession = JSON.parse(packerSessionData)
+          // Check if session is still valid
+          if (new Date(parsedSession.expires) > new Date()) {
+            setUserType('PACKER')
+            setPackerSession(parsedSession)
+            return
+          } else {
+            // Session expired, remove it
+            sessionStorage.removeItem("packer-session")
+          }
+        }
+      }
+
+      // For ADMIN/SHIPPER users, check NextAuth session via API
+      fetch('/api/auth/session')
+        .then(response => response.json())
+        .then(session => {
+          if (session?.user?.role) {
+            setUserType(session.user.role)
+          } else {
+            // No session found, redirect to login
+            router.push('/auth/signin')
+          }
+        })
+        .catch(error => {
+          console.error('Error checking session:', error)
+          router.push('/auth/signin')
+        })
+    }
+
+    checkUserType()
+  }, [router])
 
   const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
     const uploadedFile = acceptedFiles[0]
@@ -168,9 +224,20 @@ export default function UploadPage() {
     }, 200)
 
     try {
-      const response = await fetch('/api/shipments/import', {
+      // Choose the correct endpoint based on user type
+      const endpoint = userType === 'PACKER' ? '/api/packer/shipments/import' : '/api/shipments/import'
+      
+      // For PACKER users, add authentication headers
+      const headers: Record<string, string> = {}
+      if (userType === 'PACKER' && packerSession) {
+        headers['x-packer-id'] = packerSession.user.id
+        headers['x-station-id'] = packerSession.user.stationId
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers
       })
 
       clearInterval(progressInterval)
@@ -180,9 +247,13 @@ export default function UploadPage() {
       setUploadResult(result)
 
       if (result.success) {
-        // Redirect to shipments page after successful upload
+        // Redirect to appropriate dashboard after successful upload
         setTimeout(() => {
-          router.push('/dashboard')
+          if (userType === 'PACKER') {
+            router.push('/dashboard/packer')
+          } else {
+            router.push('/dashboard')
+          }
         }, 2000)
       }
     } catch (error) {
@@ -206,259 +277,39 @@ export default function UploadPage() {
     setUploadProgress(0)
   }
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Upload Shipment CSV</h1>
-          <p className="text-gray-600 mt-2">Import your inventory data from a CSV file</p>
-        </div>
-        <Button 
-          onClick={downloadTemplate}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Download Template
-        </Button>
-      </div>
+// Show loading state while checking user type
+  const checkUserType = () => {
+    // Check for PACKER session first
+    if (typeof window !== "undefined") {
+      const packerSessionData = sessionStorage.getItem("packer-session")
+      if (packerSessionData) {
+        const parsedSession = JSON.parse(packerSessionData)
+        // Check if session is Still valid
+        if (new Date(parsedSession.expires) > new Date()) {
+          setUserType('PACKER')
+          setPackerSession(parsedSession)
+          return
+        } else {
+          // Session expired, remove it
+          sessionStorage.removeItem("packer-session")
+        }
+      }
+    }
 
-      {/* Format Requirements */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Required Format
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-semibold mb-2">Required Columns:</h4>
-              <div className="flex flex-wrap gap-2">
-                {['QTY', 'SKU', 'FNSKU', 'ID'].map(col => (
-                  <Badge key={col} variant="secondary">{col}</Badge>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">File Requirements:</h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• CSV format only</li>
-                <li>• Maximum file size: 10MB</li>
-                <li>• Header row required</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sample Data */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sample Data</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FNSKU</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sampleData.map((row, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.QTY}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.SKU}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.FNSKU}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.ID}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Upload Area */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload File</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive
-                ? 'border-blue-400 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-          >
-            <input {...getInputProps()} />
-            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            {isDragActive ? (
-              <p className="text-blue-600">Drop your CSV file here...</p>
-            ) : (
-              <div>
-                <p className="text-gray-600 mb-2">
-                  Drag and drop your CSV file here, or click to browse
-                </p>
-                <p className="text-sm text-gray-500">
-                  Only CSV files up to 10MB are supported
-                </p>
-              </div>
-            )}
-          </div>
-
-          {file && (
-            <div className="mt-4 flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-900">{file.name}</p>
-                  <p className="text-sm text-green-700">
-                    {(file.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="flex items-center gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  {showPreview ? 'Hide' : 'Preview'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={resetUpload}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {uploading && (
-            <div className="mt-4">
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                <span className="text-gray-700">Uploading... {uploadProgress}%</span>
-              </div>
-              <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
-            </div>
-          )}
-
-          {uploadResult && (
-            <div className={`mt-4 p-4 rounded-lg ${
-              uploadResult.success
-                ? 'bg-green-50 border border-green-200'
-                : 'bg-red-50 border border-red-200'
-            }`}>
-              <div className="flex items-start gap-3">
-                {uploadResult.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                ) : (
-                  <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                )}
-                <div className="flex-1">
-                  <p className={`font-medium ${
-                    uploadResult.success ? 'text-green-900' : 'text-red-900'
-                  }`}>
-                    {uploadResult.success ? uploadResult.message : uploadResult.error}
-                  </p>
-                  {uploadResult.details && uploadResult.details.length > 0 && (
-                    <ul className={`mt-2 text-sm ${
-                      uploadResult.success ? 'text-green-700' : 'text-red-700'
-                    } list-disc list-inside space-y-1`}>
-                      {uploadResult.details.map((detail, index) => (
-                        <li key={index}>{detail}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Preview Data */}
-      {showPreview && previewData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Preview Data</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QTY</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FNSKU</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {previewData.map((row, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.QTY}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.SKU}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.FNSKU}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.ID}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {previewData.length >= 5 && (
-              <p className="mt-3 text-sm text-gray-500 text-center">
-                Showing first 5 rows of data
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upload Button */}
-      {file && !uploading && (
-        <div className="flex justify-center">
-          <Button
-            onClick={handleUpload}
-            size="lg"
-            className="px-8 py-3"
-          >
-            <Upload className="mr-2 h-5 w-5" />
-            Upload Shipment
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
+    // For ADMIN/SHIPPER users, check NextAuth session via API
+    fetch('/api/auth/session')
+      .then(response => response.json())
+      .then(session => {
+        if (session?.user?.role) {
+          setUserType(session.user.role)
+        } else {
+          // No session found, redirect to login
+          router.push('/auth/signin')
+        }
+      })
+      .catch(error => {
+        console.error('Error checking session:', error)
+        router.push('/auth/signin')
+      })
+    }
+  }

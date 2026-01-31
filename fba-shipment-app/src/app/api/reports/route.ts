@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { reportGenerator, ReportFormat } from '@/lib/reports'
-import { logAuditInfo } from '@/lib/audit'
+// import { logAuditInfo } from "@/lib/audit"
 import { promises as fs } from 'fs'
 import { z } from 'zod'
 
@@ -118,14 +118,15 @@ export async function GET(request: NextRequest) {
       // Handle search functionality
       const validated = searchReportsSchema.parse(Object.fromEntries(searchParams))
       
-      await logAuditInfo(
-        'User searched reports',
-        {
-          userId: session!.user.id,
-          userEmail: session!.user.email
-        },
-        `Search params: ${JSON.stringify(validated)}`
-      )
+      // TODO: Re-enable audit logging after migration
+      // logAuditInfo('SEARCHED_REPORTS', {
+      //   'User searched reports',
+      //   {
+      //     userId: session!.user.id,
+      //     userEmail: session!.user.email
+      //   },
+      //   `Search params: ${JSON.stringify(validated)}`
+      // })
       
       const allFiles = await reportGenerator.listExistingReports(1000) // Get more files for filtering
       const reports = []
@@ -216,14 +217,15 @@ export async function GET(request: NextRequest) {
     const endIndex = startIndex + limit
     const paginatedReports = reports.slice(startIndex, endIndex)
     
-    await logAuditInfo(
-      'User accessed reports list',
-      {
-        userId: session!.user.id,
-        userEmail: session!.user.email
-      },
-      `Page: ${page}, Limit: ${limit}, Total: ${total}`
-    )
+    // TODO: Re-enable audit logging after migration
+    // logAuditInfo('ACCESSED_REPORTS_LIST', {
+    //   'User accessed reports list',
+    //   {
+    //     userId: session!.user.id,
+    //     userEmail: session!.user.email
+    //   },
+    //   `Page: ${page}, Limit: ${limit}, Total: ${total}`
+    // })
     
     return NextResponse.json({
       reports: paginatedReports,

@@ -25,7 +25,7 @@ export function SidebarNav({ menuItems }: SidebarNavProps) {
         <Link
           key={item.href}
           href={item.href}
-          className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+           className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-black hover:bg-gray-100"
           onClick={closeSidebar}
         >
           <span className="mr-3 text-lg">{item.icon}</span>

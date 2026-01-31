@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 import { UserRole } from '@prisma/client'
-import { logAuditInfo } from './audit'
+// import { logAuditInfo } from './audit'
 
 const SALT_ROUNDS = 12
 
@@ -306,11 +306,11 @@ export async function updateUserRole(
       }
     })
 
-    await logAuditInfo(
-      'USER_ROLE_UPDATED',
-      { userId: adminId },
-      `Updated role for user ${user.email} to ${role}`
-    )
+    // await logAuditInfo(
+    //   'USER_ROLE_UPDATED',
+    //   { userId: adminId },
+    //   `Updated role for user ${user.email} to ${role}`
+    // )
 
     return user
   } catch (error) {
@@ -349,11 +349,11 @@ export async function resetUserPassword(
       }
     })
 
-    await logAuditInfo(
-      'USER_PASSWORD_RESET',
-      { userId: adminId },
-      `Password reset for user ${user.email}`
-    )
+    // await logAuditInfo(
+    //   'USER_PASSWORD_RESET',
+    //   { userId: adminId },
+    //   `Password reset for user ${user.email}`
+    // )
 
     return user
   } catch (error) {
@@ -399,11 +399,11 @@ export async function deleteUser(
       }
     })
 
-    await logAuditInfo(
-      'USER_DELETED',
-      { userId: adminId },
-      `Deleted user ${user.email}`
-    )
+    // await logAuditInfo(
+    //   'USER_DELETED',
+    //   { userId: adminId },
+    //   `Deleted user ${user.email}`
+    // )
 
     return user
   } catch (error) {

@@ -5,7 +5,7 @@ import { useSession } from '@/lib/mock-nextauth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { UserRole, AuthUser } from '@/lib/auth'
+import { UserRole, AuthUser } from '@/auth'
 
 interface User {
   id: string

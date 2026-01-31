@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,11 +12,16 @@ import {
   CheckCircle, 
   Circle, 
   MessageSquare, 
-  Plus,
   CheckSquare,
-  Square,
   AlertCircle,
-  PackageOpen
+  PackageOpen,
+  User,
+  LogOut,
+  Clock,
+  Activity,
+  MapPin,
+  Shield,
+  ChevronRight
 } from 'lucide-react'
 
 interface ShipmentItem {
@@ -66,8 +71,31 @@ interface PickerResponse {
   }
 }
 
+interface PackerSession {
+  user: {
+    id: string
+    email: string
+    name: string
+    role: string
+    stationId: string
+    stationName: string
+    loginTime: string
+  }
+  expires: string
+}
+
+interface RecentActivity {
+  id: string
+  type: 'scan' | 'box_conclude' | 'login' | 'logout'
+  timestamp: string
+  description: string
+  itemId?: string
+  boxId?: string
+}
+
 export default function PickerPage() {
   const params = useParams()
+  const router = useRouter()
   const uuid = params.uuid as string
 
   const [shipmentData, setShipmentData] = useState<PickerResponse | null>(null)
@@ -79,6 +107,46 @@ export default function PickerPage() {
   const [scanSuccess, setScanSuccess] = useState(false)
   const [lastScannedItem, setLastScannedItem] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
+  
+  // Enhanced PACKER authentication state
+  const [packerSession, setPackerSession] = useState<PackerSession | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showSessionInfo, setShowSessionInfo] = useState(false)
+  const [sessionTime, setSessionTime] = useState(new Date())
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
+  const [sessionExpired, setSessionExpired] = useState(false)
+
+  // Check for PACKER session on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedSession = sessionStorage.getItem('packer-session')
+      if (savedSession) {
+        try {
+          const session = JSON.parse(savedSession)
+          const expires = new Date(session.expires)
+          
+          if (expires > new Date()) {
+            setPackerSession(session)
+            setIsAuthenticated(true)
+          } else {
+            sessionStorage.removeItem('packer-session')
+            setSessionExpired(true)
+            setTimeout(() => setSessionExpired(false), 5000)
+          }
+        } catch (e) {
+          console.error('Failed to parse packer session:', e)
+        }
+      }
+    }
+  }, [])
+
+  // Update session time
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSessionTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Fetch shipment data
   const fetchShipmentData = useCallback(async () => {
@@ -105,6 +173,29 @@ export default function PickerPage() {
       setLoading(false)
     }
   }, [uuid])
+
+  // Add activity to recent history
+  const addActivity = useCallback((type: RecentActivity['type'], description: string, itemId?: string, boxId?: string) => {
+    const activity: RecentActivity = {
+      id: Date.now().toString(),
+      type,
+      timestamp: new Date().toISOString(),
+      description,
+      itemId,
+      boxId
+    }
+    setRecentActivity(prev => [activity, ...prev].slice(0, 10))
+  }, [])
+
+  // Handle PACKER logout
+  const handleLogout = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('packer-session')
+    }
+    setPackerSession(null)
+    setIsAuthenticated(false)
+    addActivity('logout', 'Logged out from packing station')
+  }, [addActivity])
 
   useEffect(() => {
     if (uuid) {
@@ -134,7 +225,7 @@ export default function PickerPage() {
         return
       }
 
-      // Add item to current box (you'll need to create this API endpoint)
+      // Add item to current box
       const response = await fetch(`/api/boxes/${selectedBoxId}/items`, {
         method: 'POST',
         headers: {
@@ -154,6 +245,11 @@ export default function PickerPage() {
       setScanSuccess(true)
       setLastScannedItem(item.sku)
       setScanInput('')
+
+      // Add activity log for authenticated users
+      if (isAuthenticated) {
+        addActivity('scan', `Scanned item ${item.sku}`, item.id, selectedBoxId)
+      }
 
       // Refresh data
       await fetchShipmentData()
@@ -184,6 +280,12 @@ export default function PickerPage() {
         throw new Error('Failed to conclude box')
       }
 
+      // Add activity log for authenticated users
+      if (isAuthenticated) {
+        const box = shipmentData?.shipment.boxes.find(b => b.id === boxId)
+        addActivity('box_conclude', `Concluded box ${box?.name || boxId}`, undefined, boxId)
+      }
+
       // Refresh data and select next open box
       await fetchShipmentData()
       const openBoxes = shipmentData?.shipment.boxes.filter((box: ShipmentBox) => box.status === 'OPEN')
@@ -201,6 +303,11 @@ export default function PickerPage() {
   // Handle adding comment to item
   const updateItemComment = (itemId: string, comment: string) => {
     setItemComments(prev => ({ ...prev, [itemId]: comment }))
+  }
+
+  // Navigate to PACKER login
+  const goToPackerLogin = () => {
+    router.push('/auth/packer-login')
   }
 
   if (loading) {
@@ -248,22 +355,56 @@ export default function PickerPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
+      {/* Session Expired Alert */}
+      {sessionExpired && (
+        <div className="max-w-7xl mx-auto mb-4">
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="w-5 h-5 text-orange-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-orange-800">Session Expired</p>
+                  <p className="text-xs text-orange-600">Your PACKER session has expired. Login again for enhanced features.</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={goToPackerLogin}>
+                  Login Again
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        {/* Header */}
+        {/* Enhanced Header with Authentication Status */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Package className="w-6 h-6 text-blue-500" />
                 <span>{shipmentData.shipment.name}</span>
+                {isAuthenticated && (
+                  <Badge variant="default" className="bg-green-600">
+                    <Shield className="w-3 h-3 mr-1" />
+                    Authenticated
+                  </Badge>
+                )}
               </div>
-              <Badge variant={shipmentData.shipment.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                {shipmentData.shipment.status}
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <Badge variant={shipmentData.shipment.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                  {shipmentData.shipment.status}
+                </Badge>
+                {isAuthenticated && (
+                  <Button size="sm" variant="outline" onClick={handleLogout}>
+                    <LogOut className="w-4 h-4 mr-1" />
+                    Logout
+                  </Button>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-gray-500">Shipper</p>
                 <p className="font-medium">{shipmentData.shipment.shipper.name}</p>
@@ -282,20 +423,153 @@ export default function PickerPage() {
               </div>
               {shipmentData.packer && (
                 <div>
-                  <p className="text-sm text-gray-500">Packer</p>
+                  <p className="text-sm text-gray-500">Assigned Packer</p>
                   <p className="font-medium">{shipmentData.packer.name}</p>
                 </div>
               )}
+              {isAuthenticated && packerSession && (
+                <div>
+                  <p className="text-sm text-gray-500">Current Session</p>
+                  <p className="font-medium">{packerSession.user.stationId}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Authentication Status Bar */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  {isAuthenticated ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-600">
+                        Logged in as {packerSession?.user.name} at {packerSession?.user.stationName}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      <span className="text-sm text-gray-600">
+                        Unauthenticated access - Limited features
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-500">
+                    {sessionTime.toLocaleTimeString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Scan Input */}
+        {/* PACKER Session Info Card (Only shown when authenticated) */}
+        {isAuthenticated && packerSession && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <User className="w-5 h-5 text-blue-600" />
+                  <span>Session Information</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowSessionInfo(!showSessionInfo)}
+                >
+                  {showSessionInfo ? 'Hide' : 'Show'} Details
+                  <ChevronRight className={`w-4 h-4 ml-1 transition-transform ${showSessionInfo ? 'rotate-90' : ''}`} />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            {showSessionInfo && (
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Station ID</p>
+                    <p className="font-mono text-sm">{packerSession.user.stationId}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Station Name</p>
+                    <p className="text-sm">{packerSession.user.stationName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Operator</p>
+                    <p className="text-sm">{packerSession.user.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">Session Time</p>
+                    <p className="text-sm">
+                      {new Date(packerSession.user.loginTime).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                {recentActivity.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-blue-200">
+                    <p className="text-sm font-medium text-blue-600 mb-2 flex items-center">
+                      <Activity className="w-4 h-4 mr-1" />
+                      Recent Activity
+                    </p>
+                    <div className="space-y-1">
+                      {recentActivity.slice(0, 5).map(activity => (
+                        <div key={activity.id} className="flex items-center space-x-2 text-xs text-gray-600">
+                          <Clock className="w-3 h-3" />
+                          <span>{new Date(activity.timestamp).toLocaleTimeString()}</span>
+                          <span className="font-medium">{activity.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        )}
+
+        {/* Enhanced Features Call-to-Action (Only shown when not authenticated) */}
+        {!isAuthenticated && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-blue-900">Unlock Enhanced Features</h3>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Login with your PACKER credentials for session tracking, activity history, and more.
+                  </p>
+                </div>
+                <Button size="sm" onClick={goToPackerLogin}>
+                  <User className="w-4 h-4 mr-1" />
+                  PACKER Login
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Enhanced Scan Input */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Scan className="w-5 h-5" />
-              <span>Scan Item</span>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Scan className="w-5 h-5" />
+                <span>Scan Item</span>
+                {isAuthenticated && (
+                  <Badge variant="outline" className="text-xs">
+                    <MapPin className="w-3 h-3 mr-1" />
+                    {packerSession?.user.stationId}
+                  </Badge>
+                )}
+              </div>
+              {isAuthenticated && (
+                <div className="text-sm text-gray-500">
+                  {recentActivity.filter(a => a.type === 'scan').length} scans this session
+                </div>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -335,7 +609,7 @@ export default function PickerPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Current Box */}
           <Card>
             <CardHeader>
@@ -457,16 +731,25 @@ export default function PickerPage() {
                         />
                       </div>
 
-                      {/* Comment Section */}
+                      {/* Enhanced Comment Section */}
                       <div className="flex items-start space-x-2">
-                        <MessageSquare className="w-4 h-4 text-gray-400 mt-1" />
+                        <MessageSquare className={`w-4 h-4 mt-1 ${isAuthenticated ? 'text-blue-500' : 'text-gray-400'}`} />
                         <input
                           type="text"
                           value={itemComments[item.id] || ''}
                           onChange={(e) => updateItemComment(item.id, e.target.value)}
-                          placeholder="Add comment..."
-                          className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder={isAuthenticated ? "Add comment (tracked)..." : "Add comment..."}
+                          className={`flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 ${
+                            isAuthenticated 
+                              ? 'border-blue-200 focus:ring-blue-500 bg-blue-50' 
+                              : 'border-gray-200 focus:ring-blue-500'
+                          }`}
                         />
+                        {isAuthenticated && itemComments[item.id] && (
+                          <Badge variant="outline" className="text-xs">
+                            Tracked
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   )

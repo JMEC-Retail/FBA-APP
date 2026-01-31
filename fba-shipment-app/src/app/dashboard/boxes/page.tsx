@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { auth } from '@/lib/auth'
+import { getClientSession } from '@/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -392,11 +392,11 @@ export default function BoxesPage() {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const sessionData = await auth() as AuthSession
+        const sessionData = await getClientSession()
         if (sessionData?.user?.role !== 'PACKER') {
           setError('Access denied. This page is only available to packers.')
         }
-        setSession(sessionData)
+        setSession(sessionData as AuthSession)
       } catch {
         setError('Failed to load user session')
       }

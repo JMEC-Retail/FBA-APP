@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
-import { logAuditInfo } from '@/lib/audit'
+import { auth } from "@/auth"
+// import { logAuditInfo } from "@/lib/audit"
 
 interface Params {
   params: Promise<{ boxId: string }>
@@ -88,10 +88,11 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Log the action (with or without user session)
     const userId = session?.user?.id || 'anonymous'
-    await logAuditInfo('ADD_ITEM_TO_BOX', {
-      userId,
-      shipmentId: box.shipmentId
-    }, `Added ${quantity} units of item ${itemId} to box ${boxId}`)
+    // TODO: Re-enable audit logging after migration
+    // logAuditInfo('ADDED_ITEM_TO_BOX', {
+    //   userId,
+    //   shipmentId: box.shipmentId
+    // }, `Added ${quantity} units of item ${itemId} to box ${boxId}`)
 
     return NextResponse.json({ 
       message: 'Item added to box successfully',

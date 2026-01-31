@@ -1,0 +1,6 @@
+[2026-01-31T00:06:08.110Z] [INFO] User: test@example.com Action: User accessed reports list | Page: 1, Limit: 20, Total: 0
+{"timestamp":"2026-01-31T00:06:08.110Z","level":"INFO","userId":"1","userEmail":"test@example.com","action":"User accessed reports list","details":"Page: 1, Limit: 20, Total: 0"}
+---
+[2026-01-31T00:06:29.632Z] [INFO] User: test@example.com Action: USER_CREATED | Created new user test@packer.com with role PACKER
+{"timestamp":"2026-01-31T00:06:29.632Z","level":"INFO","userId":"1","userEmail":"test@example.com","action":"USER_CREATED","details":"Created new user test@packer.com with role PACKER"}
+---

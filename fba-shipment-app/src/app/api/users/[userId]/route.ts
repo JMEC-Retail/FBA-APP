@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { getUserById, updateUserRole, resetUserPassword, deleteUser } from '@/lib/users'
 import { UserRole } from '@prisma/client'
 
@@ -10,7 +10,7 @@ export async function GET(
   try {
     const session = await auth()
     
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -38,7 +38,7 @@ export async function PUT(
   try {
     const session = await auth()
     
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -101,7 +101,7 @@ export async function DELETE(
   try {
     const session = await auth()
     
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import csv from 'csv-parser'
 import { Readable } from 'stream'
 import { z } from 'zod'
-import { logAuditInfo, logAuditError } from '@/lib/audit'
+import { logAuditInfo, logAuditError } from "../../../../lib/audit"
 
 // Schema for validating CSV row data
 const CsvRowSchema = z.object({
@@ -17,7 +17,7 @@ const CsvRowSchema = z.object({
   }),
   SKU: z.string().min(1, 'SKU is required'),
   FNSKU: z.string().min(1, 'FNSKU is required'),
-  ID: z.string().min(1, 'ID is required')
+  ID: z.string().min(0, 'ID is required')
 })
 
 // Maximum file size: 10MB
@@ -28,10 +28,22 @@ export async function POST(request: NextRequest) {
     // Check authentication and authorization
     const session = await auth()
     
-    if (!session?.user) {
+    // Enhanced session validation
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Unauthorized: No valid session found' },
         { status: 401 }
+      )
+    }
+
+    // Check user role - PACKER users should use the PACKER-specific endpoint
+    if (session.user.role === 'PACKER') {
+      return NextResponse.json(
+        { 
+          error: 'PACKER users should use the PACKER-specific upload endpoint',
+          suggestion: 'Please use /api/packer/shipments/import for PACKER users'
+        },
+        { status: 403 }
       )
     }
 
@@ -147,6 +159,7 @@ export async function POST(request: NextRequest) {
 
     // Create shipment and items in a transaction
     const result = await prisma.$transaction(async (tx) => {
+
       // Generate shipment name
       const shipmentName = `Import-${new Date().toISOString().split('T')[0]}-${Date.now()}`
 
@@ -176,10 +189,14 @@ export async function POST(request: NextRequest) {
       )
 
       // Log audit action
-      await logAuditInfo('SHIPMENT_IMPORT', {
-        userId: session.user.id,
-        shipmentId: shipment.id
-      }, `Imported shipment ${shipment.name} with ${items.length} items from CSV file: ${file.name}`)
+      try {
+        await logAuditInfo('IMPORTED_SHIPMENT', {
+          userId: session.user.id,
+          shipmentId: shipment.id
+        }, `Imported shipment ${shipment.name} with ${items.length} items from CSV file: ${file.name}`)
+      } catch (auditError) {
+        console.error('Failed to log audit action:', auditError)
+      }
 
       return { shipment, items }
     })
@@ -198,7 +215,7 @@ export async function POST(request: NextRequest) {
     // Log error to audit if possible
     try {
       const session = await auth()
-      if (session?.user) {
+      if (session?.user?.id) {
         await logAuditError('SHIPMENT_IMPORT_ERROR', {
           userId: session.user.id
         }, `CSV import failed: ${error instanceof Error ? error.message : 'Unknown error'}`)

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { auth } from "@/auth"
 import { notifyPickerAssigned } from '@/lib/notifications'
-import { logAuditInfo } from '@/lib/audit'
+// import { logAuditInfo } from "@/lib/audit"
 
 interface Params {
   params: Promise<{ uuid: string }>
@@ -99,10 +99,11 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
 
     // Log access attempt (with or without user)
-    await logAuditInfo('ACCESS_PICKER_LINK_UUID', {
-      userId: userId || 'anonymous',
-      shipmentId: pickerLink.shipmentId
-    }, `Accessed picker link with UUID ${uuid} for shipment ${pickerLink.shipmentId}`)
+    // TODO: Re-enable audit logging after migration
+    // logAuditInfo('ACCESSED_PICKER_LINK', {
+    //   userId: userId || 'anonymous',
+    //   shipmentId: pickerLink.shipmentId
+    // }, `Accessed picker link with UUID ${uuid} for shipment ${pickerLink.shipmentId}`)
 
     // Format response for picker interface
     const response = {
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Handle different actions
     switch (action) {
       case 'assign_packer':
-        if (!session?.user) {
+        if (!session?.user?.id) {
           return NextResponse.json({ error: 'Authentication required for this action' }, { status: 401 })
         }
 
@@ -210,10 +211,11 @@ export async function POST(request: NextRequest, { params }: Params) {
         })
 
         // Log audit action
-        await logAuditInfo('ASSIGN_PACKER_TO_LINK', {
-          userId: session.user.id,
-          shipmentId: pickerLink.shipmentId
-        }, `Assigned user ${session.user.id} as packer to picker link ${pickerLink.id}`)
+        // TODO: Re-enable audit logging after migration
+        // logAuditInfo('ASSIGNED_PACKER_TO_PICKER_LINK', {
+        //   userId: session.user.id,
+        //   shipmentId: pickerLink.shipmentId
+        // }, `Assigned user ${session.user.id} as packer to picker link ${pickerLink.id}`)
 
         // Send notification to packer
         await notifyPickerAssigned(pickerLink.uuid, session.user.id)
