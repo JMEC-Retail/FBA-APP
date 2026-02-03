@@ -1,6 +1,6 @@
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
-import { prisma } from "@/lib/prisma"
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -52,28 +52,43 @@ export function DashboardSkeleton() {
 }
 
 // Admin Dashboard Content
-export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string }) {
-  const [
-    totalUsers,
-    totalShipments,
-    totalBoxes,
-    activeShipments,
-    recentActivity
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.shipment.count(),
-    prisma.box.count(),
-    prisma.shipment.count({ where: { status: "ACTIVE" } }),
-    prisma.auditLog.findMany({
-      take: 10,
-      orderBy: { timestamp: "desc" },
-      include: {
-        user: {
-          select: { name: true, email: true }
+export function AdminDashboard({ sessionUserId }: { sessionUserId?: string }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/dashboard/admin')
+        if (!response.ok) {
+          throw new Error('Failed to fetch admin data')
         }
+        const dashboardData = await response.json()
+        setData(dashboardData)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setLoading(false)
       }
-    })
-  ])
+    }
+
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return <DashboardSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-600">Error loading dashboard: {error}</p>
+      </div>
+    )
+  }
+
+  const { totalUsers, totalShipments, totalBoxes, activeShipments, recentActivity } = data
 
   return (
     <div className="space-y-6">
@@ -91,7 +106,7 @@ export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string
             <Users className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
+            <div className="text-2xl font-bold">{totalUsers || 0}</div>
             <p className="text-xs text-black">Registered accounts</p>
           </CardContent>
         </Card>
@@ -102,7 +117,7 @@ export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string
             <Package className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalShipments}</div>
+            <div className="text-2xl font-bold">{totalShipments || 0}</div>
             <p className="text-xs text-black">All time shipments</p>
           </CardContent>
         </Card>
@@ -113,7 +128,7 @@ export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string
             <Archive className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBoxes}</div>
+            <div className="text-2xl font-bold">{totalBoxes || 0}</div>
             <p className="text-xs text-black">Created boxes</p>
           </CardContent>
         </Card>
@@ -127,7 +142,7 @@ export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string
             <div className="text-2xl font-bold">
               {totalShipments > 0 ? Math.round((activeShipments / totalShipments) * 100) : 0}%
             </div>
-            <p className="text-xs text-black">{activeShipments} active shipments</p>
+            <p className="text-xs text-black">{activeShipments || 0} active shipments</p>
           </CardContent>
         </Card>
       </div>
@@ -166,12 +181,12 @@ export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentActivity.map((log) => (
+            {recentActivity?.map((log: any) => (
               <div key={log.id} className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                 <div>
                   <p className="font-medium">{log.action}</p>
                   <p className="text-sm text-black">
-                    by {log.user.name} ({log.user.email})
+                    by {log.user?.name} ({log.user?.email})
                   </p>
                 </div>
                 <div className="text-right">
@@ -184,7 +199,7 @@ export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string
                 </div>
               </div>
             ))}
-            {recentActivity.length === 0 && (
+            {(!recentActivity || recentActivity.length === 0) && (
               <p className="text-black text-center py-4">No recent activity</p>
             )}
           </div>
@@ -195,47 +210,43 @@ export async function AdminDashboard({ sessionUserId }: { sessionUserId?: string
 }
 
 // Shipper Dashboard Content
-export async function ShipperDashboard({ sessionUserId }: { sessionUserId: string }) {
-  const [
-    shipments,
-    totalBoxes,
-    openBoxes,
-    pickerLinks
-  ] = await Promise.all([
-    prisma.shipment.findMany({
-      where: { shipperId: sessionUserId },
-      include: {
-        boxes: true,
-        items: true,
-        _count: {
-          select: {
-            items: true,
-            boxes: true,
-            pickerLinks: true
-          }
+export function ShipperDashboard({ sessionUserId }: { sessionUserId: string }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/dashboard/shipper')
+        if (!response.ok) {
+          throw new Error('Failed to fetch shipper data')
         }
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10
-    }),
-    prisma.box.count({
-      where: {
-        shipment: { shipperId: sessionUserId }
+        const dashboardData = await response.json()
+        setData(dashboardData)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setLoading(false)
       }
-    }),
-    prisma.box.count({
-      where: {
-        shipment: { shipperId: sessionUserId },
-        status: "OPEN"
-      }
-    }),
-    prisma.pickerLink.count({
-      where: {
-        shipment: { shipperId: sessionUserId },
-        isActive: true
-      }
-    })
-  ])
+    }
+
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return <DashboardSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-600">Error loading dashboard: {error}</p>
+      </div>
+    )
+  }
+
+  const { shipments, totalBoxes, openBoxes, pickerLinks } = data
 
   return (
     <div className="space-y-6">
@@ -253,7 +264,7 @@ export async function ShipperDashboard({ sessionUserId }: { sessionUserId: strin
             <Package className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{shipments.length}</div>
+            <div className="text-2xl font-bold">{shipments?.length || 0}</div>
             <p className="text-xs text-black">Your shipments</p>
           </CardContent>
         </Card>
@@ -264,7 +275,7 @@ export async function ShipperDashboard({ sessionUserId }: { sessionUserId: strin
             <Archive className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBoxes}</div>
+            <div className="text-2xl font-bold">{totalBoxes || 0}</div>
             <p className="text-xs text-black">Created boxes</p>
           </CardContent>
         </Card>
@@ -275,7 +286,7 @@ export async function ShipperDashboard({ sessionUserId }: { sessionUserId: strin
             <Box className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{openBoxes}</div>
+            <div className="text-2xl font-bold">{openBoxes || 0}</div>
             <p className="text-xs text-black">Active boxes</p>
           </CardContent>
         </Card>
@@ -286,7 +297,7 @@ export async function ShipperDashboard({ sessionUserId }: { sessionUserId: strin
             <LinkIcon className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pickerLinks}</div>
+            <div className="text-2xl font-bold">{pickerLinks || 0}</div>
             <p className="text-xs text-black">Picker links</p>
           </CardContent>
         </Card>
@@ -326,12 +337,12 @@ export async function ShipperDashboard({ sessionUserId }: { sessionUserId: strin
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {shipments.map((shipment) => (
+            {shipments?.map((shipment: any) => (
               <div key={shipment.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                   <h3 className="font-medium">{shipment.name}</h3>
                   <p className="text-sm text-black">
-                    {shipment._count.items} items • {shipment._count.boxes} boxes
+                    {shipment._count?.items || 0} items • {shipment._count?.boxes || 0} boxes
                   </p>
                   <p className="text-xs text-black">
                     Created {new Date(shipment.createdAt).toLocaleDateString()}
@@ -344,12 +355,12 @@ export async function ShipperDashboard({ sessionUserId }: { sessionUserId: strin
                     {shipment.status}
                   </Badge>
                   <p className="text-sm text-black mt-1">
-                    {shipment._count.pickerLinks} links
+                    {shipment._count?.pickerLinks || 0} links
                   </p>
                 </div>
               </div>
             ))}
-            {shipments.length === 0 && (
+            {(!shipments || shipments.length === 0) && (
               <p className="text-black text-center py-4">No shipments yet</p>
             )}
           </div>
@@ -360,58 +371,43 @@ export async function ShipperDashboard({ sessionUserId }: { sessionUserId: strin
 }
 
 // Packer Dashboard Content
-export async function PackerDashboard({ sessionUserId }: { sessionUserId: string }) {
-  const [
-    assignedShipments,
-    totalBoxesPacked,
-    recentBoxes
-  ] = await Promise.all([
-    prisma.pickerLink.findMany({
-      where: { packerId: sessionUserId, isActive: true },
-      include: {
-        shipment: {
-          include: {
-            boxes: {
-              where: { status: "OPEN" },
-              include: {
-                boxItems: {
-                  include: {
-                    item: true
-                  }
-                }
-              }
-            },
-            items: true
-          }
+export function PackerDashboard({ sessionUserId }: { sessionUserId: string }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/dashboard/packer')
+        if (!response.ok) {
+          throw new Error('Failed to fetch packer data')
         }
+        const dashboardData = await response.json()
+        setData(dashboardData)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setLoading(false)
       }
-    }),
-    prisma.box.count({
-      where: {
-        shipment: {
-          pickerLinks: {
-            some: { packerId: sessionUserId }
-          }
-        }
-      }
-    }),
-    prisma.box.findMany({
-      where: {
-        shipment: {
-          pickerLinks: {
-            some: { packerId: sessionUserId }
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      include: {
-        shipment: {
-          select: { name: true }
-        }
-      }
-    })
-  ])
+    }
+
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return <DashboardSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-600">Error loading dashboard: {error}</p>
+      </div>
+    )
+  }
+
+  const { assignedShipments, totalBoxesPacked, recentBoxes } = data
 
   return (
     <div className="space-y-6">
@@ -429,7 +425,7 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
             <Package className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{assignedShipments.length}</div>
+            <div className="text-2xl font-bold">{assignedShipments?.length || 0}</div>
             <p className="text-xs text-black">Current shipments</p>
           </CardContent>
         </Card>
@@ -441,7 +437,7 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {assignedShipments.reduce((acc, link) => acc + link.shipment.boxes.length, 0)}
+              {assignedShipments?.reduce((acc: number, link: any) => acc + (link.shipment?.boxes?.length || 0), 0) || 0}
             </div>
             <p className="text-xs text-black">Ready to pack</p>
           </CardContent>
@@ -453,7 +449,7 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
             <Archive className="h-4 w-4 text-black" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalBoxesPacked}</div>
+            <div className="text-2xl font-bold">{totalBoxesPacked || 0}</div>
             <p className="text-xs text-black">Boxes processed</p>
           </CardContent>
         </Card>
@@ -465,11 +461,11 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {assignedShipments.reduce((acc, link) => {
-                return acc + link.shipment.items.reduce((itemAcc, item) => {
+              {assignedShipments?.reduce((acc: number, link: any) => {
+                return acc + (link.shipment?.items?.reduce((itemAcc: number, item: any) => {
                   return itemAcc + (item.quantity - item.pickedQty)
-                }, 0)
-              }, 0)}
+                }, 0) || 0)
+              }, 0) || 0}
             </div>
             <p className="text-xs text-black">Items to pick</p>
           </CardContent>
@@ -510,25 +506,25 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {assignedShipments.map((link) => (
+            {assignedShipments?.map((link: any) => (
               <div key={link.id} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium">{link.shipment.name}</h3>
+                  <h3 className="font-medium">{link.shipment?.name}</h3>
                   <Badge variant="outline">
-                    {link.shipment.boxes.length} open boxes
+                    {link.shipment?.boxes?.length || 0} open boxes
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-black">Items Total</p>
                     <p className="font-medium">
-                      {link.shipment.items.reduce((acc, item) => acc + item.quantity, 0)}
+                      {link.shipment?.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0}
                     </p>
                   </div>
                   <div>
                     <p className="text-black">Items Picked</p>
                     <p className="font-medium">
-                      {link.shipment.items.reduce((acc, item) => acc + item.pickedQty, 0)}
+                      {link.shipment?.items?.reduce((acc: number, item: any) => acc + item.pickedQty, 0) || 0}
                     </p>
                   </div>
                   <div>
@@ -545,7 +541,7 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
                 </div>
               </div>
             ))}
-            {assignedShipments.length === 0 && (
+            {(!assignedShipments || assignedShipments.length === 0) && (
               <p className="text-black text-center py-4">No active assignments</p>
             )}
           </div>
@@ -559,11 +555,11 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentBoxes.map((box) => (
+            {recentBoxes?.map((box: any) => (
               <div key={box.id} className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
                 <div>
                   <p className="font-medium">{box.name}</p>
-                  <p className="text-sm text-black">{box.shipment.name}</p>
+                  <p className="text-sm text-black">{box.shipment?.name}</p>
                 </div>
                 <div className="text-right">
                   <Badge 
@@ -577,7 +573,7 @@ export async function PackerDashboard({ sessionUserId }: { sessionUserId: string
                 </div>
               </div>
             ))}
-            {recentBoxes.length === 0 && (
+            {(!recentBoxes || recentBoxes.length === 0) && (
               <p className="text-black text-center py-4">No recent box activity</p>
             )}
           </div>

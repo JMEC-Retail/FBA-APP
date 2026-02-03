@@ -38,8 +38,17 @@ export default function DashboardPage() {
     return <DashboardSkeleton />
   }
 
-  if (!session) {
+  if (!session || !session.user) {
     return <DashboardSkeleton />
+  }
+
+  // Additional validation for user.id
+  if (!session.user.id) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-600">Session error: User ID not found</p>
+      </div>
+    )
   }
 
   // Only show ADMIN and SHIPPER dashboards here
